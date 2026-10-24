@@ -30,7 +30,9 @@
     },
     "plugins": [
       "expo-audio",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-status-bar",
+      "expo-sharing"
     ]
   }
 }

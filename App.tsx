@@ -1,20 +1,29 @@
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import RootNavigator from './src/navigation/RootNavigator';
+import { colors } from './src/theme';
+
+const navTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: colors.bg,
+    card: colors.surface,
+    text: colors.text,
+    border: colors.border,
+    primary: colors.primary,
+  },
+};
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Runner tracker app</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <NavigationContainer theme={navTheme}>
+        <RootNavigator />
+      </NavigationContainer>
+      <StatusBar style="light" />
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
