@@ -1,11 +1,15 @@
 import React from 'react';
+import { ScrollView } from 'react-native';
 import ScreenContainer from '../components/common/ScreenContainer';
-import EmptyState from '../components/common/EmptyState';
+import PaceRangeSetting from '../components/run/PaceRangeSetting';
 
 export default function SettingsScreen() {
   return (
     <ScreenContainer>
-      <EmptyState title="Settings" message="Pace range, alerts and backup." />
+      <ScrollView>
+        <PaceRangeSetting />
+        {/* Backup and export will be added at the end */}
+      </ScrollView>
     </ScreenContainer>
   );
 }

@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { RunSession, RunSnapshot, RunSummary } from '../engine/RunSession';
 import { GeoPoint } from '../engine/geo';
+import { PaceAlertChecker, AlertKind } from '../engine/PaceAlertChecker';
+import { useSettingsStore } from './settingsStore';
+import { playAlert } from '../services/alerts';
 
 const emptySnapshot: RunSnapshot = {
   status: 'idle',
@@ -15,6 +18,8 @@ type RunState = {
   session: RunSession;
   snapshot: RunSnapshot;
   gpsAccuracy: number | null;
+  checker: PaceAlertChecker | null;
+  lastAlert: { kind: AlertKind; at: number } | null;
   reset: () => void;
   start: () => void;
   pause: () => void;
@@ -24,39 +29,64 @@ type RunState = {
   tick: () => void;
 };
 
-export const useRunStore = create<RunState>((set, get) => ({
-  session: new RunSession(),
-  snapshot: emptySnapshot,
-  gpsAccuracy: null,
+export const useRunStore = create<RunState>((set, get) => {
+  // Refresh the snapshot, then fire an alert if needed
+  const refresh = () => {
+    const snapshot = get().session.getSnapshot();
+    set({ snapshot });
+    const { checker } = get();
+    if (checker && snapshot.status === 'running') {
+      const kind = checker.check(snapshot);
+      if (kind) {
+        playAlert(kind);
+        set({ lastAlert: { kind, at: Date.now() } });
+      }
+    }
+  };
 
-  reset: () =>
-    set({ session: new RunSession(), snapshot: emptySnapshot, gpsAccuracy: null }),
+  return {
+    session: new RunSession(),
+    snapshot: emptySnapshot,
+    gpsAccuracy: null,
+    checker: null,
+    lastAlert: null,
 
-  start: () => {
-    get().session.start();
-    get().tick();
-  },
-  pause: () => {
-    get().session.pause();
-    get().tick();
-  },
-  resume: () => {
-    get().session.resume();
-    get().tick();
-  },
-  stop: () => {
-    const summary = get().session.stop();
-    get().tick();
-    return summary;
-  },
+    reset: () =>
+      set({
+        session: new RunSession(),
+        snapshot: emptySnapshot,
+        gpsAccuracy: null,
+        checker: null,
+        lastAlert: null,
+      }),
 
-  onPoint: (p) => {
-    const { session } = get();
-    session.addPoint(p);
-    set({ gpsAccuracy: p.accuracy, snapshot: session.getSnapshot() });
-  },
+    start: () => {
+      // Alert settings are frozen when the run starts
+      const cfg = useSettingsStore.getState().alert;
+      set({ checker: new PaceAlertChecker(cfg), lastAlert: null });
+      get().session.start();
+      refresh();
+    },
+    pause: () => {
+      get().session.pause();
+      refresh();
+    },
+    resume: () => {
+      get().session.resume();
+      refresh();
+    },
+    stop: () => {
+      const summary = get().session.stop();
+      refresh();
+      return summary;
+    },
 
-  // Called every second by the UI. Time is derived from timestamps,
-  // so this only refreshes the display and can't cause drift.
-  tick: () => set({ snapshot: get().session.getSnapshot() }),
-}));
+    onPoint: (p) => {
+      get().session.addPoint(p);
+      set({ gpsAccuracy: p.accuracy });
+      refresh();
+    },
+
+    tick: () => refresh(),
+  };
+});

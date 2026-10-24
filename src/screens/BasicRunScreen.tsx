@@ -12,20 +12,21 @@ import GpsBadge from '../components/run/GpsBadge';
 import TimerDisplay from '../components/run/TimerDisplay';
 import RunControls from '../components/run/RunControls';
 import SplitsList from '../components/run/SplitsList';
+import PaceRangeSetting from '../components/run/PaceRangeSetting';
+import AlertBanner from '../components/run/AlertBanner';
 import { useRunSession } from '../hooks/useRunSession';
+import { isGpsReady } from '../engine/geo';
 import { formatDistanceKm, formatPace } from '../utils/format';
 import { spacing } from '../theme';
-import { isGpsReady } from '../engine/geo';
 
 export default function BasicRunScreen() {
   useKeepAwake();
   const nav = useNavigation();
   const insets = useSafeAreaInsets();
-  const { snapshot, gpsAccuracy, permission, start, pause, resume, stop } =
+  const { snapshot, gpsAccuracy, permission, lastAlert, start, pause, resume, stop } =
     useRunSession();
   const status = snapshot.status;
 
-  // Confirm before leaving in the middle of a run
   useEffect(() => {
     return nav.addListener('beforeRemove', (e) => {
       if (status !== 'running' && status !== 'paused') return;
@@ -55,9 +56,12 @@ export default function BasicRunScreen() {
     );
   }
 
+  const showBanner = lastAlert && status === 'running' && Date.now() - lastAlert.at < 6000;
+
   return (
     <ScreenContainer style={{ paddingBottom: insets.bottom + spacing.md }}>
       <GpsBadge accuracy={gpsAccuracy} />
+      {showBanner ? <AlertBanner kind={lastAlert.kind} /> : null}
       <TimerDisplay seconds={snapshot.elapsedSec} />
 
       <View style={styles.statsRow}>
@@ -66,13 +70,13 @@ export default function BasicRunScreen() {
         <BigStat label="Pace now" value={formatPace(snapshot.currentPace)} unit="/km" />
       </View>
 
-      <ScrollView style={styles.splits}>
-        <SplitsList laps={snapshot.laps} />
+      <ScrollView style={styles.middle}>
+        {status === 'idle' ? <PaceRangeSetting /> : <SplitsList laps={snapshot.laps} />}
       </ScrollView>
 
       <RunControls
         status={status}
-        canStart={permission === 'granted' && isGpsReady(gpsAccuracy)}        
+        canStart={permission === 'granted' && isGpsReady(gpsAccuracy)}
         onStart={start}
         onPause={pause}
         onResume={resume}
@@ -85,5 +89,5 @@ export default function BasicRunScreen() {
 
 const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', marginBottom: spacing.lg },
-  splits: { flex: 1, marginBottom: spacing.md },
+  middle: { flex: 1, marginBottom: spacing.md },
 });

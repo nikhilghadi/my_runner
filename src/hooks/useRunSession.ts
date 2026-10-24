@@ -9,6 +9,7 @@ export function useRunSession() {
   const snapshot = useRunStore((s) => s.snapshot);
   const gpsAccuracy = useRunStore((s) => s.gpsAccuracy);
   const [permission, setPermission] = useState<PermissionState>('checking');
+  const lastAlert = useRunStore((s) => s.lastAlert);
 
   useEffect(() => {
     useRunStore.getState().reset();
@@ -35,5 +36,5 @@ export function useRunSession() {
   }, []);
 
   const { start, pause, resume, stop } = useRunStore.getState();
-  return { snapshot, gpsAccuracy, permission, start, pause, resume, stop };
+  return { snapshot, gpsAccuracy, permission, lastAlert, start, pause, resume, stop };
 }
